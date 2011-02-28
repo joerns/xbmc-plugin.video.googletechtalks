@@ -1,7 +1,13 @@
 import urllib2
 import xml.dom.minidom
 
+##########################################################################################
+# public classes
+
 class YouTubeVideo:
+    '''
+    A class representig YouTube video files. 
+    '''
     def __init__(self):
         self.title = None
         self.id = None
@@ -15,14 +21,42 @@ class YouTubeVideo:
         else:
             return "[%s][%s] %s" %(self.id, self.published, self.title)
 
-def data(page = 1, max_results = 10):
+    def img(self):
+        return 'http://i.ytimg.com/vi/%s/hqdefault.jpg'%self.id
+
+    def videourl(self):
+        return 'plugin://plugin.video.youtube?path=/root&action=play_video&videoid=%s' \
+            % self.id;
+
+
+##########################################################################################
+# public functions
+
+def fetch_data(page = 1, max_result = 10, orderby="published"):
+    '''
+    Fetch youtube video data with the given parameters.
+    '''
+    dom = xml.dom.minidom.parseString(_data(page, max_result, orderby))
+    return _parse_document(dom)    
+
+
+##########################################################################################
+# private functions
+
+def _data(page = 1, max_results = 10, orderby="published"):
+    '''
+    Get XML description of GoogleTechTalk-Videos.
+    '''
     url = "http://gdata.youtube.com/feeds/api/videos?"\
-        "max-results=%d&start-index=%d&author=GoogleTechTalks&orderby=published"\
-        % (max_results, (page-1)*max_results+1)
+        "max-results=%d&start-index=%d&author=GoogleTechTalks&orderby=%s"\
+        % (max_results, (page-1)*max_results+1, orderby)
 
     return urllib2.urlopen(url).read()
 
-def parse_text_node(node, tag):
+def _parse_text_node(node, tag):
+    '''
+    Return a string containing all text contents of nodes with a given tag name.
+    '''
     s = ""
 
     for tagnode in node.getElementsByTagName(tag):
@@ -33,28 +67,23 @@ def parse_text_node(node, tag):
     return s
 
             
-def parse_document(node):
+def _parse_document(node):
+    '''
+    Parse an XML document and create video objects.
+    '''
     x = []
     
     for n in node.getElementsByTagName("entry"):
         elem = YouTubeVideo()
   
-        elem.title = parse_text_node(n, "title")
-        elem.id = parse_text_node(n, "id").split("/")[-1]
-#        elem.id = parse_text_node(n, "yt:videoid")
-        elem.published = parse_text_node(n, "published")
-        elem.updated = parse_text_node(n, "updated")
-        elem.description = parse_text_node(n, "media:description")
+        elem.title = _parse_text_node(n, "title")
+        elem.id = _parse_text_node(n, "id").split("/")[-1]
+#        elem.id = _parse_text_node(n, "yt:videoid")
+        elem.published = _parse_text_node(n, "published")
+        elem.updated = _parse_text_node(n, "updated")
+        elem.description = _parse_text_node(n, "media:description")
         x.append(elem)
 
     return x
 
-
-
-dom = xml.dom.minidom.parseString(data(1,25))
-elems = parse_document(dom)
-i = 1
-for e in elems:
-    print i, str(e)
-    i += 1
 
